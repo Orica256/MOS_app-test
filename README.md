@@ -80,7 +80,7 @@ cd C:/xampp/htdocs          # Windows
 # または
 cd /Applications/XAMPP/htdocs   # Mac
 
-git clone https://github.com/[組織名]/mos.git
+git clone https://github.com/[組織名]/MOS_app-test.git
 cd mos
 ```
 
