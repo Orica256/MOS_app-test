@@ -1,0 +1,16 @@
+<?php
+/**
+ * database.php.example
+ * このファイルをコピーして database.php を作成し、各自の環境に合わせて設定してください。
+ * database.php は .gitignore により Git 管理対象外です。
+ *
+ * cp src/config/database.php.example src/config/database.php
+ */
+
+return [
+    'host'    => 'localhost',
+    'dbname'  => 'mos_db',
+    'user'    => 'root',
+    'pass'    => '',          // XAMPPデフォルトはパスワードなし
+    'charset' => 'utf8mb4',
+];
