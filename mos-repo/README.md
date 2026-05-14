@@ -144,7 +144,7 @@ LoadModule rewrite_module modules/mod_rewrite.so
 #### 5. ブラウザで確認
 
 ```
-http://localhost/MOS_app-test/mos-repo/mos/public/index.html    # お客様画面
+http://localhost/MOS_app-test/mos-repo/public/index.html    # お客様画面
 http://localhost/MOS_app-test/mos-repo/public/staff.html   # スタッフ管理画面
 ```
 
