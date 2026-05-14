@@ -144,8 +144,8 @@ LoadModule rewrite_module modules/mod_rewrite.so
 #### 5. ブラウザで確認
 
 ```
-http://localhost/mos/public/index.html    # お客様画面
-http://localhost/mos/public/staff.html   # スタッフ管理画面
+http://localhost/MOS_app-test/mos-repo/mos/public/index.html    # お客様画面
+http://localhost/MOS_app-test/mos-repo/public/staff.html   # スタッフ管理画面
 ```
 
 > **注意:** プロトタイプ段階では `js/api.js` の `USE_MOCK: true` に設定されているため、
