@@ -5,7 +5,7 @@
  * API仕様書 Ver.2.1.0 準拠
  *
  * エンドポイント: POST /api/orders
- * method: getOrders | updateStatus
+ * method: getOrders | createOrder | updateStatus
  */
 
 require_once __DIR__ . '/../lib/db.php';
@@ -38,6 +38,7 @@ $method = $body['method'] ?? '';
 
 match ($method) {
     'getOrders'    => handle_get_orders($body),
+    'createOrder'  => handle_create_order($body),
     'updateStatus' => handle_update_status($body),
     default        => json_error('INVALID_REQUEST', "Unknown method: {$method}", 400),
 };
@@ -91,11 +92,13 @@ function handle_get_orders(array $b): void {
         $params[':to_time'] = $toTime;
     }
 
-    $sql = 'SELECT o.hash, o.store_id, o.entry_time, o.customer_id, o.bill_status
+    $sql = 'SELECT o.hash, o.store_id, o.entry_time, o.customer_id, o.bill_status,
+                   o.guest_count, o.course_key, o.table_no
             FROM orders o';
     if (!empty($where)) {
         $sql .= ' WHERE ' . implode(' AND ', $where);
     }
+    $sql .= ' ORDER BY o.entry_time DESC';
     if ($customerId !== null) {
         $sql .= ' LIMIT 1';
     }
@@ -120,6 +123,9 @@ function handle_get_orders(array $b): void {
             'entryTime'  => $order['entry_time'],
             'customerId' => $order['customer_id'],
             'billStatus' => (int) $order['bill_status'],
+            'guestCount' => (int) $order['guest_count'],
+            'courseKey'  => $order['course_key'],
+            'tableNo'    => $order['table_no'],
             'items'      => array_map(fn($i) => [
                 'orderTime'    => $i['order_time'],
                 'menuName'     => $i['menu_name'],
@@ -133,6 +139,185 @@ function handle_get_orders(array $b): void {
     }
 
     json_ok($result);
+}
+
+// ════════════════════════════════════════════════════════
+// createOrder
+// ════════════════════════════════════════════════════════
+function handle_create_order(array $b): void {
+    $storeId    = isset($b['storeId']) ? (string) $b['storeId'] : '';
+    $customerId = isset($b['customerId']) ? (string) $b['customerId'] : '';
+    $tableNo    = isset($b['tableNo']) ? trim((string) $b['tableNo']) : '';
+    $guestCount = $b['guestCount'] ?? null;
+    $courseKey  = array_key_exists('courseKey', $b) && $b['courseKey'] !== null
+        ? (string) $b['courseKey'] : null;
+    $entryTime  = isset($b['entryTime']) ? (string) $b['entryTime'] : '';
+    $items      = $b['items'] ?? null;
+
+    if (!preg_match('/^[A-Z0-9]{2}$/', $storeId)) {
+        json_error('INVALID_PARAMETER', 'storeId must be 2 uppercase letters or digits.', 400);
+    }
+    if (!preg_match('/^[0-9]{7}$/', $customerId)) {
+        json_error('INVALID_PARAMETER', 'customerId must be 7 digits.', 400);
+    }
+    if ($tableNo === '' || strlen($tableNo) > 16) {
+        json_error('INVALID_PARAMETER', 'tableNo is required and must be 16 chars or less.', 400);
+    }
+    if (!is_int($guestCount) || $guestCount < 1 || $guestCount > 40) {
+        json_error('INVALID_PARAMETER', 'guestCount must be 1-40.', 400);
+    }
+    if ($courseKey !== null && !preg_match('/^[a-z0-9_-]{1,32}$/', $courseKey)) {
+        json_error('INVALID_PARAMETER', 'courseKey format is invalid.', 400);
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/', $entryTime)) {
+        json_error('INVALID_PARAMETER', 'entryTime must be ISO8601 format.', 400);
+    }
+    if (!is_array($items) || count($items) === 0) {
+        json_error('INVALID_PARAMETER', 'items must contain at least one item.', 400);
+    }
+
+    foreach ($items as $item) {
+        if (!is_array($item)) {
+            json_error('INVALID_PARAMETER', 'Each item must be an object.', 400);
+        }
+        $menuName = isset($item['menuName']) ? trim((string) $item['menuName']) : '';
+        $unitPrice = $item['unitPrice'] ?? null;
+        $taxRate = $item['taxRate'] ?? null;
+        $orderQty = $item['orderQty'] ?? null;
+        $offerQty = $item['offerQty'] ?? 0;
+        $categoryName = array_key_exists('categoryName', $item) && $item['categoryName'] !== null
+            ? trim((string) $item['categoryName']) : null;
+
+        if ($menuName === '' || strlen($menuName) > 64) {
+            json_error('INVALID_PARAMETER', 'menuName is required and must be 64 chars or less.', 400);
+        }
+        if (!is_int($unitPrice) || $unitPrice < 0) {
+            json_error('INVALID_PARAMETER', 'unitPrice must be a non-negative integer.', 400);
+        }
+        if (!is_int($taxRate) || $taxRate < 0 || $taxRate > 100) {
+            json_error('INVALID_PARAMETER', 'taxRate must be 0-100.', 400);
+        }
+        if (!is_int($orderQty) || $orderQty < 1 || $orderQty > 99) {
+            json_error('INVALID_PARAMETER', 'orderQty must be 1-99.', 400);
+        }
+        if (!is_int($offerQty) || $offerQty < 0 || $offerQty > 99) {
+            json_error('INVALID_PARAMETER', 'offerQty must be 0-99.', 400);
+        }
+        if ($categoryName !== null && strlen($categoryName) > 16) {
+            json_error('INVALID_PARAMETER', 'categoryName must be 16 chars or less.', 400);
+        }
+    }
+
+    $pdo = get_db();
+    $entryTimeSql = str_replace('T', ' ', $entryTime);
+    $orderTimeSql = date('Y-m-d H:i:s');
+    $existingStmt = $pdo->prepare(
+        'SELECT hash, store_id, entry_time, bill_status, guest_count, course_key, table_no
+         FROM orders
+         WHERE customer_id = :customer_id
+         ORDER BY entry_time DESC
+         LIMIT 1'
+    );
+    $existingStmt->execute([':customer_id' => $customerId]);
+    $existingOrder = $existingStmt->fetch();
+
+    if ($existingOrder && (int) $existingOrder['bill_status'] !== 1) {
+        json_error('INVALID_REQUEST', 'Cannot add items after billing has started.', 400);
+    }
+
+    $hash = $existingOrder ? $existingOrder['hash'] : bin2hex(random_bytes(16));
+
+    try {
+        $pdo->beginTransaction();
+
+        if ($existingOrder) {
+            $stmt = $pdo->prepare(
+                'UPDATE orders
+                 SET updated_at = NOW()
+                 WHERE hash = :hash'
+            );
+            $stmt->execute([':hash' => $hash]);
+        } else {
+            $stmt = $pdo->prepare(
+                'INSERT INTO orders (
+                    hash, store_id, customer_id, entry_time, bill_status,
+                    guest_count, course_key, table_no
+                 ) VALUES (
+                    :hash, :store_id, :customer_id, :entry_time, 1,
+                    :guest_count, :course_key, :table_no
+                 )'
+            );
+            $stmt->execute([
+                ':hash'        => $hash,
+                ':store_id'    => $storeId,
+                ':customer_id' => $customerId,
+                ':entry_time'  => $entryTimeSql,
+                ':guest_count' => $guestCount,
+                ':course_key'  => $courseKey,
+                ':table_no'    => $tableNo,
+            ]);
+        }
+
+        $stmt2 = $pdo->prepare(
+            'INSERT INTO order_items (
+                order_hash, order_time, menu_name, unit_price, tax_rate,
+                order_qty, offer_qty, category_name
+             ) VALUES (
+                :order_hash, :order_time, :menu_name, :unit_price, :tax_rate,
+                :order_qty, :offer_qty, :category_name
+             )'
+        );
+
+        foreach ($items as $item) {
+            $stmt2->execute([
+                ':order_hash'    => $hash,
+                ':order_time'    => $orderTimeSql,
+                ':menu_name'     => trim((string) $item['menuName']),
+                ':unit_price'    => $item['unitPrice'],
+                ':tax_rate'      => $item['taxRate'],
+                ':order_qty'     => $item['orderQty'],
+                ':offer_qty'     => $item['offerQty'] ?? 0,
+                ':category_name' => array_key_exists('categoryName', $item) && $item['categoryName'] !== null
+                    ? trim((string) $item['categoryName']) : null,
+            ]);
+        }
+
+        $itemsStmt = $pdo->prepare(
+            'SELECT order_time, menu_name, unit_price, tax_rate, order_qty, offer_qty, category_name
+             FROM order_items
+             WHERE order_hash = :hash
+             ORDER BY order_time ASC, id ASC'
+        );
+        $itemsStmt->execute([':hash' => $hash]);
+        $storedItems = $itemsStmt->fetchAll();
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        json_error('DB_ACCESS_ERROR', 'Failed to create order.', 500);
+    }
+
+    json_ok([
+        'hash'       => $hash,
+        'storeId'    => $existingOrder ? $existingOrder['store_id'] : $storeId,
+        'entryTime'  => $existingOrder ? str_replace(' ', 'T', $existingOrder['entry_time']) : $entryTime,
+        'customerId' => $customerId,
+        'billStatus' => 1,
+        'guestCount' => $existingOrder ? (int) $existingOrder['guest_count'] : $guestCount,
+        'courseKey'  => $existingOrder ? $existingOrder['course_key'] : $courseKey,
+        'tableNo'    => $existingOrder ? $existingOrder['table_no'] : $tableNo,
+        'items'      => array_map(fn($i) => [
+            'orderTime'    => str_replace(' ', 'T', $i['order_time']),
+            'menuName'     => $i['menu_name'],
+            'unitPrice'    => (int) $i['unit_price'],
+            'taxRate'      => (int) $i['tax_rate'],
+            'orderQty'     => (int) $i['order_qty'],
+            'offerQty'     => (int) $i['offer_qty'],
+            'categoryName' => $i['category_name'],
+        ], $storedItems),
+    ]);
 }
 
 // ════════════════════════════════════════════════════════
@@ -160,10 +345,27 @@ function handle_update_status(array $b): void {
     $pdo = get_db();
 
     // ── 注文存在確認 ──
-    $stmt = $pdo->prepare(
-        'SELECT hash FROM orders WHERE customer_id = :customer_id ORDER BY entry_time DESC LIMIT 1'
-    );
-    $stmt->execute([':customer_id' => $customerId]);
+    if ($hash !== null) {
+        $stmt = $pdo->prepare(
+            'SELECT hash FROM orders
+             WHERE hash = :hash AND customer_id = :customer_id
+             LIMIT 1'
+        );
+        $stmt->execute([
+            ':hash'        => $hash,
+            ':customer_id' => $customerId,
+        ]);
+    } else {
+        $stmt = $pdo->prepare(
+            'SELECT hash FROM orders
+             WHERE customer_id = :customer_id
+             ORDER BY entry_time DESC
+             LIMIT 1'
+        );
+        $stmt->execute([
+            ':customer_id' => $customerId,
+        ]);
+    }
     $order = $stmt->fetch();
 
     if (!$order) {
@@ -171,18 +373,14 @@ function handle_update_status(array $b): void {
         json_error('ORDER_NOT_FOUND', 'Order not found for the specified customerId.', 400);
     }
 
-    // ── ハッシュによる同一性判定 ──
-    if ($hash !== null && $order['hash'] !== $hash) {
-        json_error('ORDER_NOT_FOUND', 'Hash mismatch. The order may have been updated.', 400);
-    }
-
     // ── ステータス更新 ──
     $stmt2 = $pdo->prepare(
         'UPDATE orders SET bill_status = :bill_status, updated_at = NOW()
-         WHERE customer_id = :customer_id'
+         WHERE hash = :hash AND customer_id = :customer_id'
     );
     $stmt2->execute([
         ':bill_status' => $billStatus,
+        ':hash'        => $order['hash'],
         ':customer_id' => $customerId,
     ]);
 

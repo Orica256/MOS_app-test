@@ -5,12 +5,13 @@
 ## 目次
 
 1. [プロジェクト概要](#1-プロジェクト概要)
-2. [ディレクトリ構成](#2-ディレクトリ構成)
-3. [ローカル開発環境セットアップ（XAMPP）](#3-ローカル開発環境セットアップxampp)
-4. [ブランチ戦略（GitHub Flow）](#4-ブランチ戦略github-flow)
-5. [開発ルール](#5-開発ルール)
-6. [API仕様](#6-api仕様)
-7. [デモアカウント](#7-デモアカウント)
+2. [現在の主な機能](#2-現在の主な機能)
+3. [ディレクトリ構成](#3-ディレクトリ構成)
+4. [ローカル開発環境セットアップ（XAMPP）](#4-ローカル開発環境セットアップxampp)
+5. [ブランチ戦略（GitHub Flow）](#5-ブランチ戦略github-flow)
+6. [開発ルール](#6-開発ルール)
+7. [API仕様](#7-api仕様)
+8. [デモアカウント](#8-デモアカウント)
 
 ---
 
@@ -27,12 +28,24 @@
 
 ---
 
-## 2. ディレクトリ構成
+## 2. 現在の主な機能
+
+| 区分 | 主な機能 |
+|---|---|
+| お客様画面 | QR読取デモ、人数入力、コース選択、メニュー注文、カート、注文履歴、会計確認、会計依頼後の注文ロック、専用の注文一覧画面 |
+| スタッフ画面 | 注文管理、部分配膳数の更新、会計管理、レジ通知デモ、卓管理、スタッフ管理、売上レポート、会計履歴 |
+| 会計まわり | 会計は注文単位ではなく、QRコード単位（`customerId` 単位）で管理 |
+| デモ機能 | モックAPI、疑似リアルタイム通知、過去60日分の売上・会計履歴データ |
+
+---
+
+## 3. ディレクトリ構成
 
 ```
 mos/
 ├── .gitignore
 ├── .htaccess                    # Apacheルーティング設定
+├── CLAUDE.md                    # 要求・変更履歴の引き継ぎメモ
 ├── README.md
 ├── public/                      # Webルート（XAMPPはここを公開）
 │   ├── index.html               # お客様画面
@@ -48,7 +61,8 @@ mos/
 │       └── staff.js             # スタッフ管理画面ロジック
 ├── src/
 │   ├── api/
-│   │   └── orders.php           # POST /api/orders エントリポイント
+│   │   ├── orders.php           # POST /api/orders エントリポイント
+│   │   └── checkout_requests.php # POST /api/checkout-requests エントリポイント
 │   ├── config/
 │   │   ├── database.php.example # DB接続設定テンプレート（要コピー）
 │   │   └── database.php         # ← 各自作成（.gitignore対象）
@@ -57,13 +71,13 @@ mos/
 │       └── response.php         # APIレスポンスユーティリティ
 ├── database/
 │   └── migrations/
-│       └── 001_create_tables.sql # DB初期構築SQL
-└── docs/                        # ドキュメント置き場
+│       ├── 001_create_tables.sql        # DB初期構築SQL
+│       └── 002_create_checkout_requests.sql # 会計依頼テーブル追加SQL
 ```
 
 ---
 
-## 3. ローカル開発環境セットアップ（XAMPP）
+## 4. ローカル開発環境セットアップ（XAMPP）
 
 ### 前提
 
@@ -80,7 +94,7 @@ cd C:/xampp/htdocs          # Windows
 # または
 cd /Applications/XAMPP/htdocs   # Mac
 
-git clone https://github.com/[組織名]/MOS_app-test.git
+git clone https://github.com/[組織名]/mos.git
 cd mos
 ```
 
@@ -110,15 +124,18 @@ return [
 1. ブラウザで `http://localhost/phpmyadmin` を開く
 2. 「インポート」タブを選択
 3. `database/migrations/001_create_tables.sql` を選択してインポート実行
+4. 続けて `database/migrations/002_create_checkout_requests.sql` を実行
 
 **コマンドラインを使う場合:**
 
 ```bash
 # Windowsの場合（XAMPP shellから）
 mysql -u root < database/migrations/001_create_tables.sql
+mysql -u root mos_db < database/migrations/002_create_checkout_requests.sql
 
 # Macの場合
 /Applications/XAMPP/xamppfiles/bin/mysql -u root < database/migrations/001_create_tables.sql
+/Applications/XAMPP/xamppfiles/bin/mysql -u root mos_db < database/migrations/002_create_checkout_requests.sql
 ```
 
 #### 4. Apacheのmod_rewriteを有効化
@@ -154,7 +171,7 @@ http://localhost/mos/public/staff.html   # スタッフ管理画面
 
 ---
 
-## 4. ブランチ戦略（GitHub Flow）
+## 5. ブランチ戦略（GitHub Flow）
 
 プロトタイプ開発では **GitHub Flow**（シンプル2ブランチ運用）を採用します。
 
@@ -220,7 +237,7 @@ git branch -d feature/[機能名]
 
 ---
 
-## 5. 開発ルール
+## 6. 開発ルール
 
 ### ファイル変更禁止（要相談）
 
@@ -248,12 +265,13 @@ git branch -d feature/[機能名]
 
 ---
 
-## 6. API仕様
+## 7. API仕様
 
 ### エンドポイント
 
 ```
 POST /api/orders
+POST /api/checkout-requests
 Content-Type: application/json
 ```
 
@@ -271,6 +289,30 @@ Content-Type: application/json
 
 > ⚠️ ver2.0.0 では配列 `[{...}]` 形式でしたが、ver2.1.0 からオブジェクト `{...}` 形式に変更されています。
 
+### createOrder リクエスト
+
+```json
+{
+  "method": "createOrder",
+  "storeId": "AA",
+  "customerId": "0000099",
+  "tableNo": "1F-1",
+  "guestCount": 2,
+  "courseKey": "standard",
+  "entryTime": "2026-05-16T19:30:00",
+  "items": [
+    {
+      "menuName": "生ビール",
+      "unitPrice": 500,
+      "taxRate": 10,
+      "orderQty": 2,
+      "offerQty": 0,
+      "categoryName": "ドリンク"
+    }
+  ]
+}
+```
+
 ### updateStatus リクエスト
 
 ```json
@@ -281,6 +323,38 @@ Content-Type: application/json
   "billStatus": 2
 }
 ```
+
+### MOS内部用 会計依頼API
+
+レジ連携APIとは別に、顧客画面からスタッフへ「お会計をお願いする」依頼を送るための内部APIを持ちます。
+
+```json
+{
+  "method": "requestCheckout",
+  "customerId": "0000099",
+  "tableNo": "1F-1",
+  "orderHash": "0c192fff..."
+}
+```
+
+```json
+{
+  "method": "getCheckoutRequests",
+  "customerId": null,
+  "status": "pending"
+}
+```
+
+```json
+{
+  "method": "updateCheckoutRequestStatus",
+  "requestId": 1,
+  "status": "acknowledged"
+}
+```
+
+> エンドポイント: `POST /api/checkout-requests`  
+> 顧客の会計依頼は MOS 内部の通知であり、レジシステム向け `updateStatus` の代替ではありません。
 
 ### billStatus値
 
@@ -297,30 +371,37 @@ Content-Type: application/json
 
 ```javascript
 MOS.API_CONFIG = {
-  USE_MOCK: true,           // true=モック / false=実API
-  ENDPOINT: "/api/orders",  // 本番エンドポイント
+  USE_MOCK: true,                         // true=モック / false=実API
+  ENDPOINT: "/api/orders",                // 注文API
+  CHECKOUT_ENDPOINT: "/api/checkout-requests", // 会計依頼API
   TIMEOUT_MS: 3000,
 };
 ```
 
 ---
 
-## 7. デモアカウント
+## 8. デモアカウント
 
 スタッフ画面 (`staff.html`) のデモ用ログイン情報：
 
 | 社員番号 | パスワード | 氏名 | 役職 | アクセス可能な機能 |
 |---|---|---|---|---|
 | S001 | pass1111 | 田中 一郎 | 👑 管理職 | 全機能 |
-| S002 | pass2222 | 佐藤 花子 | 👤 スタッフ | 注文管理・卓管理 |
-| S003 | pass3333 | 鈴木 太郎 | 👤 スタッフ | 注文管理・卓管理 |
-| S004 | pass4444 | 山田 美咲 | 👤 スタッフ | 注文管理・卓管理 |
+| S002 | pass2222 | 佐藤 花子 | 👤 スタッフ | 注文管理・会計管理・卓管理 |
+| S003 | pass3333 | 鈴木 太郎 | 👤 スタッフ | 注文管理・会計管理・卓管理 |
+| S004 | pass4444 | 山田 美咲 | 👤 スタッフ | 注文管理・会計管理・卓管理 |
 
 > 本番実装時はパスワードを必ず変更し、`password_hash()` でハッシュ化してDBに保存してください。
 
 ---
 
-## 関連ドキュメント
+## 主要ファイル
 
-- [MOS 仕様書 v1.3.0](docs/MOS_仕様書_v1.3.0.md)
-- [API仕様書 Ver.2.1.0](docs/API仕様書_ver2_1_0.pdf)
+- [お客様画面](public/index.html)
+- [スタッフ画面](public/staff.html)
+- [お客様画面ロジック](public/js/customer.js)
+- [スタッフ画面ロジック](public/js/staff.js)
+- [注文API](src/api/orders.php)
+- [会計依頼API](src/api/checkout_requests.php)
+- [DB初期構築SQL](database/migrations/001_create_tables.sql)
+- [会計依頼テーブル追加SQL](database/migrations/002_create_checkout_requests.sql)

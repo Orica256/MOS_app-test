@@ -12,7 +12,6 @@
 </head>
 <body>
 
-<!-- ナビ -->
 <nav class="gnav" id="gnav">
   <div class="gnav-logo">🏮 居酒屋みどり亭<small>Mobile Order System</small></div>
   <div class="gnav-right">
@@ -20,18 +19,14 @@
   </div>
 </nav>
 
-<!-- ウィザードバー -->
 <div class="wzbar hidden" id="wzbar">
   <div class="wz-row" id="wzRow"></div>
 </div>
 
-<!-- ═══════════════════════ SCREEN: QR ═══════════════════════ -->
 <section class="screen active" id="screenQr">
   <div class="qr-wrap">
     <div class="qr-frame">
-      <div class="qr-box">
-        <span id="qrEmoji">📷</span>
-      </div>
+      <div class="qr-box"><span id="qrEmoji">📷</span></div>
       <span class="qrc tl"></span><span class="qrc tr"></span>
       <span class="qrc bl"></span><span class="qrc br"></span>
     </div>
@@ -41,7 +36,6 @@
   </div>
 </section>
 
-<!-- ═══════════════════════ SCREEN: GUEST ════════════════════ -->
 <section class="screen" id="screenGuest">
   <div class="step-body">
     <div class="step-hdr">
@@ -67,7 +61,6 @@
   </div>
 </section>
 
-<!-- ═══════════════════════ SCREEN: COURSE ═══════════════════ -->
 <section class="screen" id="screenCourse">
   <div class="step-body">
     <div class="step-hdr">
@@ -76,42 +69,33 @@
     </div>
     <div class="crs-list" id="courseList"></div>
   </div>
-  <div class="step-footer">
-    <button class="btn btn-primary" id="btnCourseNext" disabled>コースを選択してください</button>
+  <div class="step-footer" style="display:flex;gap:10px;">
+    <button class="btn" id="btnCourseBack" style="background:#f0e4d4;color:var(--ts);width:auto;padding:14px 18px;flex-shrink:0;">← 戻る</button>
+    <button class="btn btn-primary" id="btnCourseNext" disabled style="flex:1;">コースを選択してください</button>
   </div>
 </section>
 
-<!-- ═══════════════════════ SCREEN: MENU ════════════════════ -->
 <section class="screen" id="screenMenu">
-  <!-- 情報バー -->
   <div class="info-bar" id="infoBar"></div>
-  <!-- 飲み放題バナー -->
   <div class="drink-promo hidden" id="drinkPromo">
     <span>🍺</span><span class="dp-txt" id="drinkPromoTxt"></span>
   </div>
-  <!-- ラストオーダーバナー -->
   <div class="lo-bar hidden" id="loBar">
     <span class="lo-em">⏰</span><span id="loTxt">ラストオーダーです</span>
   </div>
-  <!-- カテゴリタブ -->
   <div class="cat-bar" id="catBar" role="tablist"></div>
-  <!-- メニュー一覧 -->
   <div class="menu-list" id="menuList"></div>
-  <!-- ボトムナビ -->
   <nav class="bot-nav" aria-label="注文ナビ">
     <button class="bn-tab active" id="btnNavMenu" data-tab="menu">
       <span class="bn-em">🍽️</span><span class="bn-lbl">メニュー</span>
     </button>
-    <button class="bn-cart" id="btnOpenCart" disabled>
-      🛒 カートを見る
-    </button>
+    <button class="bn-cart" id="btnOpenCart" disabled>🛒 カートを見る</button>
     <button class="bn-tab" id="btnNavHistory" data-tab="history">
       <span class="bn-em">📜</span><span class="bn-lbl">注文履歴</span>
     </button>
   </nav>
 </section>
 
-<!-- ═══════════════════════ SCREEN: HISTORY ══════════════════ -->
 <section class="screen" id="screenHistory">
   <div class="hist-hdr">
     <div>
@@ -125,14 +109,23 @@
     <button class="bn-tab" id="btnNavMenuFromHist" data-tab="menu">
       <span class="bn-em">🍽️</span><span class="bn-lbl">メニュー</span>
     </button>
-    <button class="bn-call" id="btnCallStaffHist">🔔 スタッフを呼ぶ</button>
+    <div style="flex:2;"></div>
     <button class="bn-tab active">
       <span class="bn-em">📜</span><span class="bn-lbl">注文履歴</span>
     </button>
   </nav>
 </section>
 
-<!-- ═══════════════ DRAWER: CART ═══════════════════════════ -->
+<section class="screen" id="screenOrderSummary">
+  <div class="hist-hdr summary-hdr">
+    <div>
+      <div class="hist-title">🧾 注文一覧</div>
+      <div class="hist-sub" id="orderSummarySub">会計処理中</div>
+    </div>
+  </div>
+  <div class="hist-body" id="orderSummaryBody"></div>
+</section>
+
 <div class="overlay hidden" id="cartOverlay" role="dialog" aria-modal="true" aria-label="カート">
   <div class="cart-drw">
     <div class="drw-hdr">
@@ -146,12 +139,12 @@
         <span class="drw-tot-val" id="cartTotal">¥0</span>
       </div>
       <div class="drw-breakdown" id="cartBreakdown"></div>
+      <button class="drw-back-menu" id="btnBackToMenu">← 商品画面へ戻る</button>
       <button class="btn btn-primary" id="btnOrder" disabled>商品を選んでください</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════ OVERLAY: ORDER DONE ════════════════════ -->
 <div class="overlay hidden" id="doneOverlay" role="dialog" aria-modal="true">
   <div class="done-card">
     <div class="done-ck" id="doneCheck">✅</div>
@@ -162,14 +155,23 @@
   </div>
 </div>
 
-<!-- トースト -->
-<div class="toast hidden" id="toast" role="alert" aria-live="polite"></div>
+<div class="overlay hidden" id="checkoutConfirmOverlay" role="dialog" aria-modal="true" aria-label="会計確認">
+  <div class="confirm-card">
+    <div class="confirm-icon">💴</div>
+    <h2 class="confirm-title">お会計に進みますか？</h2>
+    <p class="confirm-msg">会計準備をスタッフへ依頼します。<br>準備ができましたらレジまでお越しください。</p>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" id="btnCancelCheckout">戻る</button>
+      <button class="confirm-ok" id="btnConfirmCheckout">お会計に進む</button>
+    </div>
+  </div>
+</div>
 
-<!-- デモリセット -->
+<div class="toast hidden" id="toast" role="alert" aria-live="polite"></div>
 <button class="demo-rst hidden" id="btnReset">↩ デモリセット</button>
 
-<script src="js/data.js"></script>
-<script src="js/api.js"></script>
-<script src="js/customer.js"></script>
+<script src="js/data.js?v=20260519-2"></script>
+<script src="js/api.js?v=20260519-2"></script>
+<script src="js/customer.js?v=20260519-2"></script>
 </body>
 </html>

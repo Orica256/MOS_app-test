@@ -310,6 +310,12 @@ body { background: #e8ddd3; }
 .drw-tot-lbl { font-size: .78rem; color: var(--ts); }
 .drw-tot-val { font-family: var(--serif); font-size: 1.4rem; font-weight: 900; }
 .drw-breakdown { display: flex; justify-content: space-between; font-size: .68rem; color: var(--ts); margin-bottom: 13px; padding: 7px 10px; background: var(--bd2); border-radius: var(--r3); }
+.drw-back-menu {
+  width: 100%; margin-bottom: 9px; padding: 11px 12px; border-radius: var(--r);
+  border: 1.5px solid var(--bd); background: #fff; color: var(--ts);
+  font-family: var(--sans); font-size: .8rem; font-weight: 700; cursor: pointer;
+}
+.drw-back-menu:active { background: var(--bd2); }
 
 /* 注文完了オーバーレイ */
 @keyframes ov-in { from{opacity:0} to{opacity:1} }
@@ -321,10 +327,20 @@ body { background: #e8ddd3; }
 .done-msg   { font-size: .82rem; color: var(--ts); line-height: 1.8; margin-bottom: 22px; }
 .done-msg small { font-size: .72rem; color: #bbb; }
 .done-cont { width: 100%; background: var(--or); color: #fff; border: none; border-radius: var(--r); padding: 13px; font-family: var(--sans); font-size: .9rem; font-weight: 700; cursor: pointer; margin-bottom: 9px; }
+.confirm-card { background: #fff; border-radius: 22px; padding: 26px 22px; text-align: center; max-width: 320px; width: 90%; box-shadow: 0 20px 56px rgba(0,0,0,.3); }
+#checkoutConfirmOverlay { align-items: center; }
+.confirm-icon { font-size: 2.6rem; margin-bottom: 8px; }
+.confirm-title { font-family: var(--serif); font-size: 1.16rem; font-weight: 800; color: var(--wb); margin-bottom: 7px; }
+.confirm-msg { font-size: .8rem; color: var(--ts); line-height: 1.7; margin-bottom: 18px; }
+.confirm-actions { display: flex; gap: 8px; }
+.confirm-cancel, .confirm-ok { flex: 1; border-radius: var(--r); padding: 12px 10px; font-family: var(--sans); font-size: .82rem; font-weight: 700; cursor: pointer; }
+.confirm-cancel { border: 1.5px solid var(--bd); background: #fff; color: var(--ts); }
+.confirm-ok { border: none; background: var(--or); color: #fff; }
 .done-cls  { width: 100%; background: none; color: var(--ts); border: 1.5px solid var(--bd); border-radius: var(--r); padding: 11px; font-family: var(--sans); font-size: .82rem; cursor: pointer; }
 
 /* 注文履歴 */
 #screenHistory { overflow: hidden; }
+#screenOrderSummary { overflow: hidden; }
 .hist-hdr { background: var(--ch); padding: 12px 16px 14px; display: flex; align-items: center; gap: 10px; }
 .hist-title { font-family: var(--serif); font-size: 1rem; font-weight: 800; color: var(--orl); flex: 1; }
 .hist-sub   { font-size: .65rem; color: rgba(255,255,255,.38); margin-top: 2px; }
@@ -334,6 +350,14 @@ body { background: #e8ddd3; }
 .hs-sum-l   { color: rgba(255,255,255,.55); font-size: .72rem; }
 .hs-sum-val { font-family: var(--serif); font-size: 1.2rem; font-weight: 800; color: var(--orl); }
 .hs-sum-sub { font-size: .66rem; color: rgba(255,255,255,.38); margin-top: 2px; }
+.checkout-card { background: #fff; border: 1px solid var(--bd2); border-radius: var(--r); padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.checkout-title { font-family: var(--serif); font-size: .92rem; font-weight: 700; color: var(--wb); }
+.checkout-sub { font-size: .67rem; color: var(--ts); margin-top: 2px; }
+.checkout-btn { border: 0; border-radius: 999px; background: var(--or); color: #fff; padding: 10px 14px; font-size: .75rem; font-weight: 800; cursor: pointer; font-family: var(--sans); white-space: nowrap; }
+.checkout-btn:disabled { background: #c8b9ac; cursor: default; }
+.locked-checkout-card { background: #fff7ed; border: 1px solid #fed7aa; border-radius: var(--r); padding: 14px 16px; }
+.locked-title { font-family: var(--serif); font-size: .96rem; font-weight: 800; color: #c2410c; }
+.locked-msg { font-size: .76rem; color: #9a3412; line-height: 1.6; margin-top: 4px; }
 .hist-session { background: #fff; border-radius: var(--r); border: 1.5px solid var(--bd2); box-shadow: var(--sh); overflow: hidden; }
 .hs-header { padding: 11px 14px; background: linear-gradient(to right, var(--orp), #fff9f5, #fff); border-bottom: 1px solid var(--bd2); display: flex; align-items: flex-start; justify-content: space-between; }
 .hs-time   { font-family: var(--serif); font-size: .92rem; font-weight: 700; color: var(--wb); }
@@ -349,8 +373,6 @@ body { background: #e8ddd3; }
 .hs-name  { flex: 1; color: var(--tm); }
 .hs-qty   { font-size: .72rem; color: var(--ts); min-width: 48px; text-align: right; }
 .hs-price { font-family: var(--serif); font-weight: 700; font-size: .82rem; color: var(--or); min-width: 64px; text-align: right; }
-.hs-served { width: 20px; height: 20px; border-radius: 5px; border: 1.5px solid var(--bd); background: #fff; display: flex; align-items: center; justify-content: center; font-size: .68rem; flex-shrink: 0; }
-.hs-served.ok { background: var(--or); border-color: var(--or); color: #fff; }
 .hs-footer { padding: 9px 14px; border-top: 1px solid var(--bd2); background: #fafaf7; display: flex; align-items: center; justify-content: space-between; }
 .hs-total  { font-family: var(--serif); font-weight: 700; font-size: .92rem; color: var(--or); }
 
